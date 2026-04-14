@@ -6,6 +6,7 @@
 <title>Painel Interno – Contabilidade Rocha</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0b2e26;--bg-2:#123b31;--card:#1f4d45;
@@ -214,6 +215,38 @@ input[type="date"].filter-select::-webkit-calendar-picker-indicator{filter:inver
 .icon-btn:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
 .icon-btn.del:hover{border-color:rgba(240,128,128,.4);color:#f08080;background:rgba(240,128,128,.08)}
 
+/* CLIENTES */
+.cliente-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.cliente-card{background:var(--ticket-bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;transition:.2s;cursor:pointer}
+.cliente-card:hover{border-color:rgba(200,154,104,.3);filter:brightness(1.05)}
+.cliente-card h4{font-size:15px;font-weight:600;margin-bottom:6px}
+.cliente-card .cnpj{font-size:12px;font-family:monospace;color:var(--gold);background:rgba(200,154,104,.1);border:1px solid rgba(200,154,104,.2);border-radius:6px;padding:2px 8px;display:inline-block;margin-bottom:8px}
+.cliente-card .meta{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.import-zone{border:2px dashed rgba(200,154,104,.3);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:16px}
+.import-zone:hover{border-color:rgba(200,154,104,.6);background:rgba(200,154,104,.04)}
+.import-zone .icon{font-size:32px;margin-bottom:8px}
+.import-zone p{color:var(--muted);font-size:13px;margin:0}
+.import-zone strong{color:var(--gold-2)}
+
+/* AGENDA */
+.agenda-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.agenda-card{background:var(--ticket-bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;transition:.2s}
+.agenda-card:hover{border-color:rgba(200,154,104,.3);filter:brightness(1.05)}
+.agenda-card .agenda-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.agenda-card h4{font-size:14px;font-weight:600;line-height:1.35;flex:1}
+.badge-recorrente{background:rgba(126,196,232,.15);color:#2980b9;border:1px solid rgba(126,196,232,.3)}
+.badge-avulso{background:rgba(200,154,104,.15);color:var(--gold);border:1px solid rgba(200,154,104,.3)}
+.badge-enviado{background:rgba(127,202,155,.15);color:#3a9e6a;border:1px solid rgba(127,202,155,.3)}
+.badge-pendente{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line)}
+.agenda-card .agenda-meta{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.agenda-card .agenda-msg{margin-top:10px;font-size:12px;color:var(--muted);background:var(--detail-bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;line-height:1.5;max-height:60px;overflow:hidden;text-overflow:ellipsis}
+.agenda-card .agenda-actions{margin-top:12px;display:flex;gap:6px}
+.template-vars{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.var-chip{padding:3px 8px;border-radius:6px;background:rgba(64,145,108,.2);border:1px solid rgba(64,145,108,.3);color:var(--accent-2);font-size:11px;font-family:monospace;cursor:pointer;transition:.15s}
+.var-chip:hover{background:rgba(64,145,108,.35)}
+.cnpj-status{font-size:11px;margin-top:4px;height:16px}
+.cnpj-ok{color:#3a9e6a}.cnpj-err{color:#f08080}
+
 /* UTILS */
 .loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--muted);gap:10px;font-size:14px}
 .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.15);border-top-color:var(--accent-2);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
@@ -258,6 +291,8 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
     <div class="nav-tabs">
       <button class="nav-tab active" onclick="showScreen('dashboard')">Dashboard</button>
       <button class="nav-tab" onclick="showScreen('tickets')">Tickets</button>
+      <button class="nav-tab" onclick="showScreen('clientes')">Clientes</button>
+      <button class="nav-tab" onclick="showScreen('agenda')">Agenda</button>
       <button class="nav-tab" onclick="showScreen('colaboradores')">Colaboradores</button>
     </div>
     <div class="topbar-right">
@@ -331,6 +366,37 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
       <div class="ticket-list" id="ticket-list"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
     </div>
 
+    <!-- CLIENTES -->
+    <div id="sc-clientes" class="screen">
+      <div class="section-title">
+        <span>Clientes</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-create" style="background:transparent;border:1px solid rgba(200,154,104,.4);color:var(--gold-2)" onclick="document.getElementById('import-excel-input').click()">📥 Importar Excel</button>
+          <input type="file" id="import-excel-input" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(event)"/>
+          <button class="btn-create" onclick="openNovoCliente()">+ Novo Cliente</button>
+        </div>
+      </div>
+      <div class="filters" style="margin-bottom:16px">
+        <input class="search-bar" id="search-clientes" placeholder="Buscar por nome, CNPJ ou contato..." oninput="renderClientes()"/>
+      </div>
+      <div class="cliente-grid" id="cliente-grid"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+    </div>
+
+    <!-- AGENDA -->
+    <div id="sc-agenda" class="screen">
+      <div class="section-title">
+        <span>Agenda de Cobranças</span>
+        <button class="btn-create" onclick="openNovoAgendamento()">+ Novo Agendamento</button>
+      </div>
+      <div class="filters" style="margin-bottom:16px">
+        <button class="filter-btn active" onclick="setAgendaFilter(this,'todos')">Todos</button>
+        <button class="filter-btn" onclick="setAgendaFilter(this,'pendente')">Pendentes</button>
+        <button class="filter-btn" onclick="setAgendaFilter(this,'enviado')">Enviados</button>
+        <button class="filter-btn" onclick="setAgendaFilter(this,'recorrente')">Recorrentes</button>
+      </div>
+      <div class="agenda-grid" id="agenda-grid"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+    </div>
+
     <!-- COLABORADORES -->
     <div id="sc-colaboradores" class="screen">
       <div class="section-title">
@@ -396,6 +462,108 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
   </div>
 </div>
 
+<!-- MODAL CLIENTE -->
+<div class="modal-overlay hidden" id="modal-cliente">
+  <div class="modal" style="width:min(500px,100%)">
+    <button class="modal-close" onclick="closeModal('modal-cliente')">✕</button>
+    <h3 id="modal-cliente-title">Novo Cliente</h3>
+    <div class="field">
+      <label>CNPJ *</label>
+      <input id="cl-cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18" oninput="maskCNPJ(this)" onblur="validarCNPJ(this)"/>
+      <div class="cnpj-status" id="cnpj-status"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Nome / Razão Social *</label><input id="cl-nome" type="text" placeholder="Ex: Empresa XYZ Ltda"/></div>
+    <div class="form-row" style="margin-top:12px">
+      <div class="field"><label>Nome do Contato</label><input id="cl-contato" type="text" placeholder="Ex: João Silva"/></div>
+      <div class="field"><label>Telefone / WhatsApp *</label><input id="cl-telefone" type="text" placeholder="(31) 99999-9999" oninput="maskPhone(this)" maxlength="15"/></div>
+    </div>
+    <input type="hidden" id="cl-edit-id"/>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('modal-cliente')">Cancelar</button>
+      <button class="btn-save" id="btn-save-cliente" onclick="saveCliente()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORTAR EXCEL -->
+<div class="modal-overlay hidden" id="modal-import-preview">
+  <div class="modal modal-wide">
+    <button class="modal-close" onclick="closeModal('modal-import-preview')">✕</button>
+    <h3>📥 Pré-visualização da Importação</h3>
+    <p id="import-summary" style="color:var(--muted);font-size:13px;margin-bottom:16px"></p>
+    <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
+      <table id="import-table" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+    </div>
+    <div id="import-mapping" style="margin-top:16px"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('modal-import-preview')">Cancelar</button>
+      <button class="btn-save" id="btn-confirmar-import" onclick="confirmarImport()">✅ Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGENDAMENTO -->
+<div class="modal-overlay hidden" id="modal-agenda">
+  <div class="modal" style="width:min(560px,100%)">
+    <button class="modal-close" onclick="closeModal('modal-agenda')">✕</button>
+    <h3 id="modal-agenda-title">Novo Agendamento</h3>
+
+    <div class="field">
+      <label>Cliente *</label>
+      <select id="ag-cliente-select" onchange="preencherTelefoneAgenda()">
+        <option value="">— Selecione um cliente —</option>
+      </select>
+    </div>
+
+    <div class="form-row" style="margin-top:12px">
+      <div class="field">
+        <label>WhatsApp de Envio *</label>
+        <input id="ag-telefone" type="text" placeholder="(31) 99999-9999" oninput="maskPhone(this)" maxlength="15"/>
+      </div>
+      <div class="field">
+        <label>Tipo de Agendamento *</label>
+        <select id="ag-tipo" onchange="toggleAgendaTipo()">
+          <option value="avulso">📅 Avulso (data única)</option>
+          <option value="recorrente">🔁 Recorrente (todo mês)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="ag-avulso-fields" style="margin-top:12px">
+      <div class="form-row">
+        <div class="field"><label>Data *</label><input id="ag-data" type="date"/></div>
+        <div class="field"><label>Horário *</label><input id="ag-hora" type="time" value="09:00"/></div>
+      </div>
+    </div>
+
+    <div id="ag-recorrente-fields" style="margin-top:12px;display:none">
+      <div class="form-row">
+        <div class="field"><label>Dia do mês *</label><input id="ag-dia-mes" type="number" min="1" max="28" placeholder="Ex: 5"/></div>
+        <div class="field"><label>Horário *</label><input id="ag-hora-rec" type="time" value="09:00"/></div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>Mensagem *</label>
+      <div class="template-vars">
+        <span style="font-size:11px;color:var(--muted);align-self:center">Variáveis:</span>
+        <span class="var-chip" onclick="insertVar('{nome}')">&#123;nome&#125;</span>
+        <span class="var-chip" onclick="insertVar('{cnpj}')">&#123;cnpj&#125;</span>
+        <span class="var-chip" onclick="insertVar('{contato}')">&#123;contato&#125;</span>
+        <span class="var-chip" onclick="insertVar('{documento}')">&#123;documento&#125;</span>
+        <span class="var-chip" onclick="insertVar('{mes}')">&#123;mes&#125;</span>
+      </div>
+      <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio dos documentos referentes a {mes}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="5"></textarea>
+    </div>
+
+    <input type="hidden" id="ag-edit-id"/>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('modal-agenda')">Cancelar</button>
+      <button class="btn-save" id="btn-save-agenda" onclick="saveAgendamento()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL QR CODE -->
 <div class="modal-overlay hidden" id="modal-qrcode">
   <div class="modal" style="width:min(440px,100%);text-align:center">
@@ -426,6 +594,8 @@ const db=createClient(SUPA_URL,SUPA_KEY);
 let currentUser=null, allTickets=[], allColabs=[], activeFilter='todos', currentTicketId=null;
 let chartDiario=null, chartStatus=null;
 let autoRefreshInterval=null;
+let allClientes=[], allAgendamentos=[], activeAgendaFilter='todos';
+let importPreviewData=[], agendaCheckInterval=null;
 
 // ── UTILS ──
 const initials=n=>(n||'?').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
@@ -478,10 +648,12 @@ function startApp(){
   document.getElementById('top-avatar').textContent=initials(currentUser.nome);
   document.getElementById('top-name').textContent=currentUser.nome;
   showScreen('dashboard');
-  // Auto-refresh a cada 30s
   autoRefreshInterval=setInterval(()=>{
     loadTickets().then(()=>{updateCounters();if(document.getElementById('sc-tickets').classList.contains('active'))renderTickets();});
   },30000);
+  // Verificar agendamentos a cada minuto
+  agendaCheckInterval=setInterval(verificarAgendamentos, 60000);
+  verificarAgendamentos();
 }
 function tryRestoreSession(){
   const s=sessionStorage.getItem('cr_user');
@@ -493,10 +665,12 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('sc-'+name).classList.add('active');
-  const tabs={dashboard:0,tickets:1,colaboradores:2};
+  const tabs={dashboard:0,tickets:1,clientes:2,agenda:3,colaboradores:4};
   document.querySelectorAll('.nav-tab')[tabs[name]].classList.add('active');
   if(name==='dashboard') loadDashboard();
   if(name==='tickets'){loadColabs();loadTickets().then(renderTickets);}
+  if(name==='clientes') loadClientes();
+  if(name==='agenda') loadAgenda();
   if(name==='colaboradores') loadColabs();
 }
 
@@ -868,8 +1042,6 @@ function openModal(id){
   if(id==='modal-qrcode') loadQRCode();
 }
 function closeModal(id){document.getElementById(id).classList.add('hidden')}
-document.addEventListener('click',e=>{['modal-ticket','modal-detalhe','modal-colab'].forEach(id=>{const el=document.getElementById(id);if(el&&e.target===el)closeModal(id);});});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')['modal-ticket','modal-detalhe','modal-colab'].forEach(id=>closeModal(id));});
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 
 // ── QR CODE ──
@@ -962,6 +1134,487 @@ async function desconectarWhatsApp(){
     actEl.innerHTML=`<button class="btn-save" onclick="loadQRCode()">🔄 Atualizar</button>`;
   }
 }
+
+
+// ══════════════════════════════════════
+// CLIENTES
+// ══════════════════════════════════════
+
+// Máscara CNPJ
+function maskCNPJ(el){
+  let v=el.value.replace(/\D/g,'').slice(0,14);
+  v=v.replace(/^(\d{2})(\d)/,'$1.$2');
+  v=v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3');
+  v=v.replace(/\.(\d{3})(\d)/,'.$1/$2');
+  v=v.replace(/(\d{4})(\d)/,'$1-$2');
+  el.value=v;
+}
+
+function maskPhone(el){
+  let v=el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length<=10) v=v.replace(/^(\d{2})(\d{4})(\d+)/,'($1) $2-$3');
+  else v=v.replace(/^(\d{2})(\d{5})(\d+)/,'($1) $2-$3');
+  el.value=v;
+}
+
+function validarCNPJLogica(c){
+  c=c.replace(/\D/g,'');
+  if(c.length!==14) return false;
+  if(/^(\d)\1+$/.test(c)) return false;
+  let soma=0,resto;
+  for(let i=0;i<12;i++) soma+=parseInt(c[i])*(i<4?5-i:13-i);
+  resto=soma%11<2?0:11-(soma%11);
+  if(resto!==parseInt(c[12])) return false;
+  soma=0;
+  for(let i=0;i<13;i++) soma+=parseInt(c[i])*(i<5?6-i:14-i);
+  resto=soma%11<2?0:11-(soma%11);
+  return resto===parseInt(c[13]);
+}
+
+function validarCNPJ(el){
+  const raw=el.value.replace(/\D/g,'');
+  const st=document.getElementById('cnpj-status');
+  if(!raw){st.textContent='';return;}
+  if(validarCNPJLogica(raw)){
+    st.className='cnpj-status cnpj-ok';st.textContent='✓ CNPJ válido';
+  } else {
+    st.className='cnpj-status cnpj-err';st.textContent='✗ CNPJ inválido';
+  }
+}
+
+async function loadClientes(){
+  const{data}=await db.from('clientes').select('*').order('nome');
+  allClientes=data||[];
+  renderClientes();
+}
+
+function renderClientes(){
+  const q=(document.getElementById('search-clientes')||{}).value?.toLowerCase()||'';
+  let list=[...allClientes];
+  if(q) list=list.filter(c=>
+    (c.nome||'').toLowerCase().includes(q)||
+    (c.cnpj||'').includes(q)||
+    (c.contato||'').toLowerCase().includes(q)
+  );
+  const el=document.getElementById('cliente-grid');
+  if(!el) return;
+  el.innerHTML=list.length?list.map(clienteCardHTML).join(''):'<div class="empty-state"><span>👥</span>Nenhum cliente cadastrado.</div>';
+}
+
+function clienteCardHTML(c){
+  return `<div class="cliente-card" onclick="editCliente('${c.id}')">
+    <div class="cnpj">${c.cnpj||'—'}</div>
+    <h4>${c.nome}</h4>
+    <div class="meta">
+      ${c.contato?`<span>👤 ${c.contato}</span>`:''}
+      ${c.telefone?`<span>📱 ${c.telefone}</span>`:''}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <button class="icon-btn" onclick="event.stopPropagation();editCliente('${c.id}')">✏️</button>
+      <button class="icon-btn del" onclick="event.stopPropagation();delCliente('${c.id}')">🗑</button>
+      ${c.telefone?`<button class="icon-btn" title="WhatsApp" onclick="event.stopPropagation();abrirWhatsApp('${c.telefone}')">💬</button>`:''}
+    </div>
+  </div>`;
+}
+
+function abrirWhatsApp(tel){
+  const num=tel.replace(/\D/g,'');
+  window.open(`https://wa.me/55${num}`,'_blank');
+}
+
+function openNovoCliente(){
+  document.getElementById('modal-cliente-title').textContent='Novo Cliente';
+  ['cl-cnpj','cl-nome','cl-contato','cl-telefone'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cl-edit-id').value='';
+  document.getElementById('cnpj-status').textContent='';
+  openModal('modal-cliente');
+}
+
+async function editCliente(id){
+  const c=allClientes.find(c=>c.id===id);if(!c)return;
+  document.getElementById('modal-cliente-title').textContent='Editar Cliente';
+  document.getElementById('cl-cnpj').value=c.cnpj||'';
+  document.getElementById('cl-nome').value=c.nome||'';
+  document.getElementById('cl-contato').value=c.contato||'';
+  document.getElementById('cl-telefone').value=c.telefone||'';
+  document.getElementById('cl-edit-id').value=c.id;
+  const raw=(c.cnpj||'').replace(/\D/g,'');
+  const st=document.getElementById('cnpj-status');
+  if(raw.length===14){
+    if(validarCNPJLogica(raw)){st.className='cnpj-status cnpj-ok';st.textContent='✓ CNPJ válido';}
+    else{st.className='cnpj-status cnpj-err';st.textContent='✗ CNPJ inválido';}
+  } else {st.textContent='';}
+  openModal('modal-cliente');
+}
+
+async function saveCliente(){
+  const cnpj=document.getElementById('cl-cnpj').value.trim();
+  const nome=document.getElementById('cl-nome').value.trim();
+  const contato=document.getElementById('cl-contato').value.trim();
+  const telefone=document.getElementById('cl-telefone').value.trim();
+  if(!nome||!telefone){alert('Preencha o nome e o telefone.');return;}
+  const raw=cnpj.replace(/\D/g,'');
+  if(raw&&!validarCNPJLogica(raw)){if(!confirm('O CNPJ informado parece inválido. Salvar mesmo assim?'))return;}
+  setLoading('btn-save-cliente',true);
+  const editId=document.getElementById('cl-edit-id').value;
+  const payload={cnpj:cnpj||null,nome,contato:contato||null,telefone};
+  if(editId){await db.from('clientes').update(payload).eq('id',editId);}
+  else{await db.from('clientes').insert(payload);}
+  setLoading('btn-save-cliente',false,'Salvar');
+  closeModal('modal-cliente');toast('✅ Cliente salvo!');loadClientes();
+}
+
+async function delCliente(id){
+  if(!confirm('Remover este cliente?')) return;
+  await db.from('clientes').delete().eq('id',id);
+  toast('Cliente removido.');loadClientes();
+}
+
+// ── IMPORTAÇÃO EXCEL ──
+let importWorksheetData=[];
+
+async function importarExcel(event){
+  const file=event.target.files[0];
+  event.target.value='';
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const data=new Uint8Array(e.target.result);
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    if(!rows||rows.length<2){alert('Planilha vazia ou sem dados.');return;}
+    importWorksheetData=rows;
+    showImportPreview(rows);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showImportPreview(rows){
+  const headers=rows[0];
+  const preview=rows.slice(1,6);
+  const total=rows.length-1;
+
+  document.getElementById('import-summary').textContent=`${total} registro(s) encontrado(s). Mapeie as colunas abaixo:`;
+
+  // Tabela de pré-visualização
+  const thead=`<thead style="position:sticky;top:0;background:var(--bg-2)"><tr>${headers.map(h=>`<th style="padding:8px 12px;text-align:left;font-size:12px;color:var(--gold-2);border-bottom:1px solid var(--line);white-space:nowrap">${h}</th>`).join('')}</tr></thead>`;
+  const tbody=`<tbody>${preview.map(r=>`<tr>${headers.map((_,i)=>`<td style="padding:7px 12px;font-size:12px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--muted)">${r[i]||''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  document.getElementById('import-table').innerHTML=thead+tbody;
+
+  // Seletores de mapeamento
+  const campos=[
+    {id:'map-cnpj',label:'CNPJ'},
+    {id:'map-nome',label:'Nome / Razão Social *'},
+    {id:'map-contato',label:'Nome do Contato'},
+    {id:'map-telefone',label:'Telefone / WhatsApp *'},
+  ];
+  const opts=`<option value="">— Ignorar —</option>`+headers.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+
+  // Auto-detect columns
+  function autoIdx(keywords){
+    return headers.findIndex(h=>keywords.some(k=>h.toLowerCase().includes(k)));
+  }
+
+  document.getElementById('import-mapping').innerHTML=`
+    <p style="font-size:13px;color:var(--gold-2);margin-bottom:12px;font-weight:600">🗂 Mapeamento de colunas</p>
+    <div class="form-row" style="gap:12px">
+      ${campos.map(f=>`<div class="field"><label style="font-size:12px">${f.label}</label><select id="${f.id}" class="filter-select" style="width:100%;border-radius:10px;padding:10px 12px">${opts}</select></div>`).join('')}
+    </div>`;
+
+  // Auto-selecionar
+  const tries={
+    'map-cnpj':['cnpj','cpf','documento'],
+    'map-nome':['nome','razão','empresa','fantasia','razao','client'],
+    'map-contato':['contato','responsavel','responsável','representante'],
+    'map-telefone':['telefone','fone','celular','whatsapp','tel','phone'],
+  };
+  Object.entries(tries).forEach(([id,kws])=>{
+    const idx=autoIdx(kws);
+    if(idx>=0) document.getElementById(id).value=idx;
+  });
+
+  openModal('modal-import-preview');
+}
+
+async function confirmarImport(){
+  const mapCnpj=document.getElementById('map-cnpj').value;
+  const mapNome=document.getElementById('map-nome').value;
+  const mapContato=document.getElementById('map-contato').value;
+  const mapTelefone=document.getElementById('map-telefone').value;
+  if(mapNome===''||mapTelefone===''){alert('Mapeie ao menos Nome e Telefone.');return;}
+
+  const rows=importWorksheetData.slice(1).filter(r=>r.some(c=>c!==''));
+  const records=rows.map(r=>({
+    cnpj:mapCnpj!==''?(r[+mapCnpj]||'').toString().trim()||null:null,
+    nome:(r[+mapNome]||'').toString().trim(),
+    contato:mapContato!==''?(r[+mapContato]||'').toString().trim()||null:null,
+    telefone:(r[+mapTelefone]||'').toString().trim(),
+  })).filter(r=>r.nome&&r.telefone);
+
+  if(!records.length){alert('Nenhum registro válido para importar.');return;}
+
+  document.getElementById('btn-confirmar-import').disabled=true;
+  document.getElementById('btn-confirmar-import').innerHTML='<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>Importando...';
+
+  // Inserir em lotes de 50
+  let ok=0,err=0;
+  for(let i=0;i<records.length;i+=50){
+    const batch=records.slice(i,i+50);
+    const{error}=await db.from('clientes').upsert(batch,{onConflict:'cnpj',ignoreDuplicates:false});
+    if(error) err+=batch.length; else ok+=batch.length;
+  }
+
+  document.getElementById('btn-confirmar-import').disabled=false;
+  document.getElementById('btn-confirmar-import').innerHTML='✅ Importar';
+  closeModal('modal-import-preview');
+  toast(`✅ ${ok} cliente(s) importado(s)${err?` · ${err} erro(s)`:''}!`,4000);
+  loadClientes();
+}
+
+// ══════════════════════════════════════
+// AGENDA
+// ══════════════════════════════════════
+
+function toggleAgendaTipo(){
+  const tipo=document.getElementById('ag-tipo').value;
+  document.getElementById('ag-avulso-fields').style.display=tipo==='avulso'?'block':'none';
+  document.getElementById('ag-recorrente-fields').style.display=tipo==='recorrente'?'block':'none';
+}
+
+function insertVar(v){
+  const ta=document.getElementById('ag-mensagem');
+  const s=ta.selectionStart, e=ta.selectionEnd;
+  ta.value=ta.value.slice(0,s)+v+ta.value.slice(e);
+  ta.selectionStart=ta.selectionEnd=s+v.length;
+  ta.focus();
+}
+
+async function loadAgenda(){
+  const[{data:agendamentos},{data:clientes}]=await Promise.all([
+    db.from('agendamentos').select('*, clientes(nome,cnpj,contato,telefone)').order('created_at',{ascending:false}),
+    db.from('clientes').select('*').order('nome'),
+  ]);
+  allAgendamentos=agendamentos||[];
+  allClientes=clientes||[];
+  renderAgenda();
+}
+
+function setAgendaFilter(el,f){
+  document.querySelectorAll('#sc-agenda .filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');activeAgendaFilter=f;renderAgenda();
+}
+
+function renderAgenda(){
+  let list=[...allAgendamentos];
+  if(activeAgendaFilter==='pendente') list=list.filter(a=>a.status==='pendente');
+  else if(activeAgendaFilter==='enviado') list=list.filter(a=>a.status==='enviado');
+  else if(activeAgendaFilter==='recorrente') list=list.filter(a=>a.tipo==='recorrente');
+  const el=document.getElementById('agenda-grid');
+  if(!el) return;
+  el.innerHTML=list.length?list.map(agendaCardHTML).join(''):'<div class="empty-state"><span>📅</span>Nenhum agendamento encontrado.</div>';
+}
+
+const mesesPT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function agendaCardHTML(a){
+  const cliente=a.clientes||{};
+  const tipoBadge=a.tipo==='recorrente'
+    ?'<span class="badge badge-recorrente">🔁 Recorrente</span>'
+    :'<span class="badge badge-avulso">📅 Avulso</span>';
+  const statusBadgeEl=a.status==='enviado'
+    ?'<span class="badge badge-enviado">✅ Enviado</span>'
+    :'<span class="badge badge-pendente">⏳ Pendente</span>';
+  const quando=a.tipo==='recorrente'
+    ?`Todo dia <strong>${a.dia_mes}</strong> às ${a.hora}`
+    :`${new Date(a.data_envio+'T12:00:00').toLocaleDateString('pt-BR')} às ${a.hora}`;
+  const msgPreview=(a.mensagem||'').replace(/\{nome\}/g,cliente.nome||'{nome}').replace(/\{cnpj\}/g,cliente.cnpj||'{cnpj}').replace(/\{contato\}/g,cliente.contato||'{contato}').replace(/\{mes\}/g,mesesPT[new Date().getMonth()]).replace(/\{documento\}/g,'{documento}');
+  return `<div class="agenda-card">
+    <div class="agenda-top">
+      <h4>${cliente.nome||'—'}</h4>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${tipoBadge}${statusBadgeEl}</div>
+    </div>
+    <div class="agenda-meta">
+      <span>📱 ${a.telefone||cliente.telefone||'—'}</span>
+      <span>🕐 ${quando}</span>
+      ${a.ultimo_envio?`<span>✅ Último envio: ${fmtDate(a.ultimo_envio)}</span>`:''}
+    </div>
+    <div class="agenda-msg">${msgPreview}</div>
+    <div class="agenda-actions">
+      <button class="icon-btn" title="Editar" onclick="editAgendamento('${a.id}')">✏️</button>
+      <button class="icon-btn del" title="Remover" onclick="delAgendamento('${a.id}')">🗑</button>
+      ${a.status==='pendente'?`<button class="icon-btn" title="Enviar agora" onclick="enviarAgora('${a.id}')">📤</button>`:''}
+      ${a.tipo==='recorrente'&&a.status==='enviado'?`<button class="icon-btn" title="Reativar" onclick="reativarAgendamento('${a.id}')">🔄</button>`:''}
+    </div>
+  </div>`;
+}
+
+async function openNovoAgendamento(){
+  // Garante lista atualizada de clientes
+  if(!allClientes.length){const{data}=await db.from('clientes').select('*').order('nome');allClientes=data||[];}
+  document.getElementById('modal-agenda-title').textContent='Novo Agendamento';
+  ['ag-telefone','ag-mensagem'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ag-edit-id').value='';
+  document.getElementById('ag-tipo').value='avulso';
+  document.getElementById('ag-data').value='';
+  document.getElementById('ag-hora').value='09:00';
+  document.getElementById('ag-dia-mes').value='';
+  document.getElementById('ag-hora-rec').value='09:00';
+  toggleAgendaTipo();
+  // Popular select de clientes
+  const sel=document.getElementById('ag-cliente-select');
+  sel.innerHTML='<option value="">— Selecione um cliente —</option>'+allClientes.map(c=>`<option value="${c.id}" data-tel="${c.telefone||''}">${c.nome}${c.cnpj?' ('+c.cnpj+')':''}</option>`).join('');
+  openModal('modal-agenda');
+}
+
+function preencherTelefoneAgenda(){
+  const sel=document.getElementById('ag-cliente-select');
+  const opt=sel.options[sel.selectedIndex];
+  const tel=opt?.dataset?.tel||'';
+  document.getElementById('ag-telefone').value=tel;
+}
+
+async function editAgendamento(id){
+  const a=allAgendamentos.find(a=>a.id===id);if(!a)return;
+  await openNovoAgendamento();
+  document.getElementById('modal-agenda-title').textContent='Editar Agendamento';
+  document.getElementById('ag-edit-id').value=a.id;
+  document.getElementById('ag-cliente-select').value=a.cliente_id||'';
+  document.getElementById('ag-telefone').value=a.telefone||'';
+  document.getElementById('ag-tipo').value=a.tipo;
+  document.getElementById('ag-mensagem').value=a.mensagem||'';
+  if(a.tipo==='avulso'){
+    document.getElementById('ag-data').value=a.data_envio||'';
+    document.getElementById('ag-hora').value=a.hora||'09:00';
+  } else {
+    document.getElementById('ag-dia-mes').value=a.dia_mes||'';
+    document.getElementById('ag-hora-rec').value=a.hora||'09:00';
+  }
+  toggleAgendaTipo();
+}
+
+async function saveAgendamento(){
+  const clienteId=document.getElementById('ag-cliente-select').value;
+  const telefone=document.getElementById('ag-telefone').value.trim();
+  const tipo=document.getElementById('ag-tipo').value;
+  const mensagem=document.getElementById('ag-mensagem').value.trim();
+  if(!clienteId||!telefone||!mensagem){alert('Preencha cliente, telefone e mensagem.');return;}
+  let payload={cliente_id:clienteId,telefone,tipo,mensagem,status:'pendente'};
+  if(tipo==='avulso'){
+    const data=document.getElementById('ag-data').value;
+    const hora=document.getElementById('ag-hora').value;
+    if(!data||!hora){alert('Preencha data e horário.');return;}
+    payload.data_envio=data;payload.hora=hora;
+  } else {
+    const dia=document.getElementById('ag-dia-mes').value;
+    const hora=document.getElementById('ag-hora-rec').value;
+    if(!dia||!hora){alert('Preencha o dia do mês e o horário.');return;}
+    payload.dia_mes=parseInt(dia);payload.hora=hora;
+  }
+  setLoading('btn-save-agenda',true);
+  const editId=document.getElementById('ag-edit-id').value;
+  if(editId){await db.from('agendamentos').update(payload).eq('id',editId);}
+  else{await db.from('agendamentos').insert(payload);}
+  setLoading('btn-save-agenda',false,'Salvar');
+  closeModal('modal-agenda');toast('✅ Agendamento salvo!');loadAgenda();
+}
+
+async function delAgendamento(id){
+  if(!confirm('Remover este agendamento?')) return;
+  await db.from('agendamentos').delete().eq('id',id);
+  toast('Agendamento removido.');loadAgenda();
+}
+
+async function reativarAgendamento(id){
+  await db.from('agendamentos').update({status:'pendente'}).eq('id',id);
+  toast('🔄 Agendamento reativado!');loadAgenda();
+}
+
+// ── ENVIO WHATSAPP ──
+async function enviarMensagemWhatsApp(tel, texto){
+  const num=tel.replace(/\D/g,'');
+  const destino=num.length===11?`55${num}@s.whatsapp.net`:`${num}@s.whatsapp.net`;
+  try {
+    const res=await fetch(`${EVO_URL}/message/sendText/${EVO_INST}`,{
+      method:'POST',
+      headers:{'apikey':EVO_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({number:destino,text:texto})
+    });
+    return res.ok;
+  } catch(e){console.error('Erro WA envio:',e);return false;}
+}
+
+async function enviarAgora(id){
+  const a=allAgendamentos.find(a=>a.id===id);if(!a)return;
+  const cliente=allClientes.find(c=>c.id===a.cliente_id)||{};
+  const texto=resolverTemplate(a.mensagem,cliente);
+  if(!confirm(`Enviar mensagem para ${cliente.nome||a.telefone} agora?\n\n"${texto.slice(0,100)}${texto.length>100?'...':''}"`)) return;
+  toast('📤 Enviando...');
+  const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
+  if(ok){
+    await db.from('agendamentos').update({status:a.tipo==='avulso'?'enviado':'enviado',ultimo_envio:new Date().toISOString()}).eq('id',id);
+    toast('✅ Mensagem enviada!');loadAgenda();
+  } else {
+    toast('❌ Falha no envio. Verifique se o WhatsApp está conectado.',5000);
+  }
+}
+
+function resolverTemplate(msg, cliente){
+  const hoje=new Date();
+  return (msg||'')
+    .replace(/\{nome\}/g,cliente.nome||'Cliente')
+    .replace(/\{cnpj\}/g,cliente.cnpj||'—')
+    .replace(/\{contato\}/g,cliente.contato||cliente.nome||'—')
+    .replace(/\{mes\}/g,mesesPT[hoje.getMonth()]+'/'+hoje.getFullYear())
+    .replace(/\{documento\}/g,'documentos do mês');
+}
+
+async function verificarAgendamentos(){
+  try {
+    const{data}=await db.from('agendamentos')
+      .select('*, clientes(nome,cnpj,contato,telefone)')
+      .eq('status','pendente');
+    if(!data||!data.length) return;
+    const agora=new Date();
+    for(const a of data){
+      let deveEnviar=false;
+      if(a.tipo==='avulso'&&a.data_envio&&a.hora){
+        const alvo=new Date(a.data_envio+'T'+a.hora+':00');
+        if(agora>=alvo) deveEnviar=true;
+      } else if(a.tipo==='recorrente'&&a.dia_mes&&a.hora){
+        const diaHoje=agora.getDate();
+        const [h,m]=a.hora.split(':').map(Number);
+        const horaAgora=agora.getHours()*60+agora.getMinutes();
+        const horaAlvo=h*60+m;
+        const ultimoEnvio=a.ultimo_envio?new Date(a.ultimo_envio):null;
+        const mesAtual=agora.getMonth()+'-'+agora.getFullYear();
+        const mesUltimo=ultimoEnvio?(ultimoEnvio.getMonth()+'-'+ultimoEnvio.getFullYear()):'nunca';
+        if(diaHoje>=a.dia_mes&&horaAgora>=horaAlvo&&mesAtual!==mesUltimo) deveEnviar=true;
+      }
+      if(deveEnviar){
+        const cliente=a.clientes||{};
+        const texto=resolverTemplate(a.mensagem,cliente);
+        const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
+        if(ok){
+          const upd={ultimo_envio:new Date().toISOString()};
+          if(a.tipo==='avulso') upd.status='enviado';
+          await db.from('agendamentos').update(upd).eq('id',a.id);
+          toast(`📤 Cobrança enviada para ${cliente.nome||a.telefone}`,4000);
+        }
+      }
+    }
+  } catch(e){console.error('Erro verificar agendamentos:',e);}
+}
+
+// Fechar modal de importação ao clicar fora
+document.addEventListener('click',e=>{
+  ['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda'].forEach(id=>{
+    const el=document.getElementById(id);if(el&&e.target===el)closeModal(id);
+  });
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda'].forEach(id=>closeModal(id));
+});
 
 // ── INIT ──
 applyTheme();
