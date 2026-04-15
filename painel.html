@@ -468,9 +468,8 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
     <button class="modal-close" onclick="closeModal('modal-cliente')">✕</button>
     <h3 id="modal-cliente-title">Novo Cliente</h3>
     <div class="field">
-      <label>CNPJ *</label>
-      <input id="cl-cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18" oninput="maskCNPJ(this)" onblur="validarCNPJ(this)"/>
-      <div class="cnpj-status" id="cnpj-status"></div>
+      <label>CNPJ</label>
+      <input id="cl-cnpj" type="text" placeholder="00.000.000/0000-00" maxlength="18" oninput="maskCNPJ(this)"/>
     </div>
     <div class="field" style="margin-top:12px"><label>Nome / Razão Social *</label><input id="cl-nome" type="text" placeholder="Ex: Empresa XYZ Ltda"/></div>
     <div class="form-row" style="margin-top:12px">
@@ -554,6 +553,17 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
         <span class="var-chip" onclick="insertVar('{mes}')">&#123;mes&#125;</span>
       </div>
       <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio dos documentos referentes a {mes}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="5"></textarea>
+    </div>
+
+    <div class="form-row" style="margin-top:12px">
+      <div class="field">
+        <label>Documento <small style="color:var(--muted)">(preenche <code>{documento}</code>)</small></label>
+        <input id="ag-documento" type="text" placeholder="Ex: Notas fiscais de outubro"/>
+      </div>
+      <div class="field">
+        <label>Mês de referência <small style="color:var(--muted)">(preenche <code>{mes}</code>)</small></label>
+        <input id="ag-mes" type="text" placeholder="Ex: 01/Janeiro" oninput="maskMesRef(this)" maxlength="10"/>
+      </div>
     </div>
 
     <input type="hidden" id="ag-edit-id"/>
@@ -1140,7 +1150,7 @@ async function desconectarWhatsApp(){
 // CLIENTES
 // ══════════════════════════════════════
 
-// Máscara CNPJ
+// Máscara CNPJ — só exibição, salva dígitos puros
 function maskCNPJ(el){
   let v=el.value.replace(/\D/g,'').slice(0,14);
   v=v.replace(/^(\d{2})(\d)/,'$1.$2');
@@ -1150,6 +1160,7 @@ function maskCNPJ(el){
   el.value=v;
 }
 
+// Máscara Telefone — só exibição
 function maskPhone(el){
   let v=el.value.replace(/\D/g,'').slice(0,11);
   if(v.length<=10) v=v.replace(/^(\d{2})(\d{4})(\d+)/,'($1) $2-$3');
@@ -1157,29 +1168,26 @@ function maskPhone(el){
   el.value=v;
 }
 
-function validarCNPJLogica(c){
-  c=c.replace(/\D/g,'');
-  if(c.length!==14) return false;
-  if(/^(\d)\1+$/.test(c)) return false;
-  let soma=0,resto;
-  for(let i=0;i<12;i++) soma+=parseInt(c[i])*(i<4?5-i:13-i);
-  resto=soma%11<2?0:11-(soma%11);
-  if(resto!==parseInt(c[12])) return false;
-  soma=0;
-  for(let i=0;i<13;i++) soma+=parseInt(c[i])*(i<5?6-i:14-i);
-  resto=soma%11<2?0:11-(soma%11);
-  return resto===parseInt(c[13]);
+// Máscara Mês referência DD/MMMM (ex: 01/Janeiro)
+function maskMesRef(el){
+  let v=el.value.replace(/[^0-9a-zA-ZÀ-ú\/]/g,'');
+  if(v.length>=2&&v[2]!=='/'&&!v.includes('/')) v=v.slice(0,2)+'/'+v.slice(2);
+  el.value=v;
 }
 
-function validarCNPJ(el){
-  const raw=el.value.replace(/\D/g,'');
-  const st=document.getElementById('cnpj-status');
-  if(!raw){st.textContent='';return;}
-  if(validarCNPJLogica(raw)){
-    st.className='cnpj-status cnpj-ok';st.textContent='✓ CNPJ válido';
-  } else {
-    st.className='cnpj-status cnpj-err';st.textContent='✗ CNPJ inválido';
-  }
+// Formata para exibição, salva raw
+function fmtCNPJ(v){
+  if(!v) return '—';
+  const d=v.replace(/\D/g,'');
+  if(d.length!==14) return v;
+  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+}
+function fmtPhone(v){
+  if(!v) return '—';
+  const d=v.replace(/\D/g,'');
+  if(d.length===11) return d.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3');
+  if(d.length===10) return d.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3');
+  return v;
 }
 
 async function loadClientes(){
@@ -1203,11 +1211,11 @@ function renderClientes(){
 
 function clienteCardHTML(c){
   return `<div class="cliente-card" onclick="editCliente('${c.id}')">
-    <div class="cnpj">${c.cnpj||'—'}</div>
+    <div class="cnpj">${fmtCNPJ(c.cnpj)}</div>
     <h4>${c.nome}</h4>
     <div class="meta">
       ${c.contato?`<span>👤 ${c.contato}</span>`:''}
-      ${c.telefone?`<span>📱 ${c.telefone}</span>`:''}
+      ${c.telefone?`<span>📱 ${fmtPhone(c.telefone)}</span>`:''}
     </div>
     <div style="display:flex;gap:6px;margin-top:12px">
       <button class="icon-btn" onclick="event.stopPropagation();editCliente('${c.id}')">✏️</button>
@@ -1233,31 +1241,26 @@ function openNovoCliente(){
 async function editCliente(id){
   const c=allClientes.find(c=>c.id===id);if(!c)return;
   document.getElementById('modal-cliente-title').textContent='Editar Cliente';
-  document.getElementById('cl-cnpj').value=c.cnpj||'';
+  // Preenche com formatação para exibição no input
+  const cnpjFmt=fmtCNPJ(c.cnpj);
+  document.getElementById('cl-cnpj').value=cnpjFmt==='—'?'':cnpjFmt;
   document.getElementById('cl-nome').value=c.nome||'';
   document.getElementById('cl-contato').value=c.contato||'';
-  document.getElementById('cl-telefone').value=c.telefone||'';
+  const telFmt=fmtPhone(c.telefone);
+  document.getElementById('cl-telefone').value=telFmt==='—'?'':telFmt;
   document.getElementById('cl-edit-id').value=c.id;
-  const raw=(c.cnpj||'').replace(/\D/g,'');
-  const st=document.getElementById('cnpj-status');
-  if(raw.length===14){
-    if(validarCNPJLogica(raw)){st.className='cnpj-status cnpj-ok';st.textContent='✓ CNPJ válido';}
-    else{st.className='cnpj-status cnpj-err';st.textContent='✗ CNPJ inválido';}
-  } else {st.textContent='';}
   openModal('modal-cliente');
 }
 
 async function saveCliente(){
-  const cnpj=document.getElementById('cl-cnpj').value.trim();
+  const cnpjRaw=document.getElementById('cl-cnpj').value.replace(/\D/g,'');
   const nome=document.getElementById('cl-nome').value.trim();
   const contato=document.getElementById('cl-contato').value.trim();
-  const telefone=document.getElementById('cl-telefone').value.trim();
-  if(!nome||!telefone){alert('Preencha o nome e o telefone.');return;}
-  const raw=cnpj.replace(/\D/g,'');
-  if(raw&&!validarCNPJLogica(raw)){if(!confirm('O CNPJ informado parece inválido. Salvar mesmo assim?'))return;}
+  const telefoneRaw=document.getElementById('cl-telefone').value.replace(/\D/g,'');
+  if(!nome||!telefoneRaw){alert('Preencha o nome e o telefone.');return;}
   setLoading('btn-save-cliente',true);
   const editId=document.getElementById('cl-edit-id').value;
-  const payload={cnpj:cnpj||null,nome,contato:contato||null,telefone};
+  const payload={cnpj:cnpjRaw||null,nome,contato:contato||null,telefone:telefoneRaw};
   if(editId){await db.from('clientes').update(payload).eq('id',editId);}
   else{await db.from('clientes').insert(payload);}
   setLoading('btn-save-cliente',false,'Salvar');
@@ -1428,7 +1431,7 @@ function agendaCardHTML(a){
   const quando=a.tipo==='recorrente'
     ?`Todo dia <strong>${a.dia_mes}</strong> às ${a.hora}`
     :`${new Date(a.data_envio+'T12:00:00').toLocaleDateString('pt-BR')} às ${a.hora}`;
-  const msgPreview=(a.mensagem||'').replace(/\{nome\}/g,cliente.nome||'{nome}').replace(/\{cnpj\}/g,cliente.cnpj||'{cnpj}').replace(/\{contato\}/g,cliente.contato||'{contato}').replace(/\{mes\}/g,mesesPT[new Date().getMonth()]).replace(/\{documento\}/g,'{documento}');
+  const msgPreview=resolverTemplate(a.mensagem,cliente,a);
   return `<div class="agenda-card">
     <div class="agenda-top">
       <h4>${cliente.nome||'—'}</h4>
@@ -1453,7 +1456,7 @@ async function openNovoAgendamento(){
   // Garante lista atualizada de clientes
   if(!allClientes.length){const{data}=await db.from('clientes').select('*').order('nome');allClientes=data||[];}
   document.getElementById('modal-agenda-title').textContent='Novo Agendamento';
-  ['ag-telefone','ag-mensagem'].forEach(id=>document.getElementById(id).value='');
+  ['ag-telefone','ag-mensagem','ag-documento','ag-mes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ag-edit-id').value='';
   document.getElementById('ag-tipo').value='avulso';
   document.getElementById('ag-data').value='';
@@ -1483,6 +1486,8 @@ async function editAgendamento(id){
   document.getElementById('ag-telefone').value=a.telefone||'';
   document.getElementById('ag-tipo').value=a.tipo;
   document.getElementById('ag-mensagem').value=a.mensagem||'';
+  document.getElementById('ag-documento').value=a.documento||'';
+  document.getElementById('ag-mes').value=a.mes_ref||'';
   if(a.tipo==='avulso'){
     document.getElementById('ag-data').value=a.data_envio||'';
     document.getElementById('ag-hora').value=a.hora||'09:00';
@@ -1495,11 +1500,14 @@ async function editAgendamento(id){
 
 async function saveAgendamento(){
   const clienteId=document.getElementById('ag-cliente-select').value;
-  const telefone=document.getElementById('ag-telefone').value.trim();
+  const telefone=document.getElementById('ag-telefone').value.replace(/\D/g,'');
   const tipo=document.getElementById('ag-tipo').value;
   const mensagem=document.getElementById('ag-mensagem').value.trim();
+  const documento=document.getElementById('ag-documento').value.trim();
+  const mesRef=document.getElementById('ag-mes').value.trim();
   if(!clienteId||!telefone||!mensagem){alert('Preencha cliente, telefone e mensagem.');return;}
-  let payload={cliente_id:clienteId,telefone,tipo,mensagem,status:'pendente'};
+  let payload={cliente_id:clienteId,telefone,tipo,mensagem,status:'pendente',
+    documento:documento||null,mes_ref:mesRef||null};
   if(tipo==='avulso'){
     const data=document.getElementById('ag-data').value;
     const hora=document.getElementById('ag-hora').value;
@@ -1547,7 +1555,7 @@ async function enviarMensagemWhatsApp(tel, texto){
 async function enviarAgora(id){
   const a=allAgendamentos.find(a=>a.id===id);if(!a)return;
   const cliente=allClientes.find(c=>c.id===a.cliente_id)||{};
-  const texto=resolverTemplate(a.mensagem,cliente);
+  const texto=resolverTemplate(a.mensagem,cliente,a);
   if(!confirm(`Enviar mensagem para ${cliente.nome||a.telefone} agora?\n\n"${texto.slice(0,100)}${texto.length>100?'...':''}"`)) return;
   toast('📤 Enviando...');
   const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
@@ -1559,14 +1567,17 @@ async function enviarAgora(id){
   }
 }
 
-function resolverTemplate(msg, cliente){
+function resolverTemplate(msg, cliente, agendamento){
   const hoje=new Date();
+  const mesAuto=mesesPT[hoje.getMonth()]+'/'+hoje.getFullYear();
+  const mesRef=agendamento?.mes_ref||mesAuto;
+  const doc=agendamento?.documento||'documentos do mês';
   return (msg||'')
     .replace(/\{nome\}/g,cliente.nome||'Cliente')
-    .replace(/\{cnpj\}/g,cliente.cnpj||'—')
+    .replace(/\{cnpj\}/g,fmtCNPJ(cliente.cnpj))
     .replace(/\{contato\}/g,cliente.contato||cliente.nome||'—')
-    .replace(/\{mes\}/g,mesesPT[hoje.getMonth()]+'/'+hoje.getFullYear())
-    .replace(/\{documento\}/g,'documentos do mês');
+    .replace(/\{mes\}/g,mesRef)
+    .replace(/\{documento\}/g,doc);
 }
 
 async function verificarAgendamentos(){
@@ -1593,7 +1604,7 @@ async function verificarAgendamentos(){
       }
       if(deveEnviar){
         const cliente=a.clientes||{};
-        const texto=resolverTemplate(a.mensagem,cliente);
+        const texto=resolverTemplate(a.mensagem,cliente,a);
         const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
         if(ok){
           const upd={ultimo_envio:new Date().toISOString()};
