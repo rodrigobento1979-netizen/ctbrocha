@@ -216,12 +216,17 @@ input[type="date"].filter-select::-webkit-calendar-picker-indicator{filter:inver
 .icon-btn.del:hover{border-color:rgba(240,128,128,.4);color:#f08080;background:rgba(240,128,128,.08)}
 
 /* CLIENTES */
-.cliente-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.cliente-card{background:var(--ticket-bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;transition:.2s;cursor:pointer}
-.cliente-card:hover{border-color:rgba(200,154,104,.3);filter:brightness(1.05)}
-.cliente-card h4{font-size:15px;font-weight:600;margin-bottom:6px}
-.cliente-card .cnpj{font-size:12px;font-family:monospace;color:var(--gold);background:rgba(200,154,104,.1);border:1px solid rgba(200,154,104,.2);border-radius:6px;padding:2px 8px;display:inline-block;margin-bottom:8px}
-.cliente-card .meta{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+/* CLIENTES — tabela */
+.cliente-table{width:100%;border-collapse:collapse}
+.cliente-table thead tr{border-bottom:2px solid var(--line)}
+.cliente-table th{padding:10px 14px;text-align:left;font-size:12px;font-weight:700;color:var(--gold-2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.cliente-table tbody tr{border-bottom:1px solid var(--line);transition:.15s;cursor:pointer}
+.cliente-table tbody tr:hover{background:rgba(255,255,255,.04)}
+.light .cliente-table tbody tr:hover{background:rgba(0,0,0,.03)}
+.cliente-table td{padding:11px 14px;font-size:13px;vertical-align:middle}
+.cliente-table td .cnpj-badge{font-family:monospace;font-size:12px;color:var(--gold);background:rgba(200,154,104,.1);border:1px solid rgba(200,154,104,.2);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.cliente-table td .td-muted{color:var(--muted);font-size:12px}
+.cliente-table .td-actions{display:flex;gap:6px;justify-content:flex-end}
 .import-zone{border:2px dashed rgba(200,154,104,.3);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:.2s;margin-bottom:16px}
 .import-zone:hover{border-color:rgba(200,154,104,.6);background:rgba(200,154,104,.04)}
 .import-zone .icon{font-size:32px;margin-bottom:8px}
@@ -396,7 +401,18 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
       <div class="filters" style="margin-bottom:16px">
         <input class="search-bar" id="search-clientes" placeholder="Buscar por nome, CNPJ ou contato..." oninput="renderClientes()"/>
       </div>
-      <div class="cliente-grid" id="cliente-grid"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+      <div style="overflow-x:auto">
+        <table class="cliente-table" id="cliente-table">
+          <thead><tr>
+            <th>CNPJ</th>
+            <th>Nome / Razão Social</th>
+            <th>Contato</th>
+            <th>Telefone</th>
+            <th style="text-align:right">Ações</th>
+          </tr></thead>
+          <tbody id="cliente-tbody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>Carregando...</div></td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- AGENDA -->
@@ -617,6 +633,17 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
       </div>
     </div>
 
+    <div class="form-row" style="margin-top:12px">
+      <div class="field">
+        <label>Competência <small style="color:var(--muted)">(preenche <code class="var-code">{competencia}</code>)</small></label>
+        <input id="ag-competencia" type="month" />
+      </div>
+      <div class="field">
+        <label>Tipo de Documento <small style="color:var(--muted)">(preenche <code class="var-code">{documento}</code>)</small></label>
+        <input id="ag-documento" type="text" placeholder="Ex: Notas fiscais, Folha de ponto..."/>
+      </div>
+    </div>
+
     <div class="field" style="margin-top:12px">
       <label>Mensagem *</label>
       <div class="template-vars">
@@ -625,9 +652,9 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
         <span class="var-chip" onclick="insertVar('{cnpj}')">&#123;cnpj&#125;</span>
         <span class="var-chip" onclick="insertVar('{contato}')">&#123;contato&#125;</span>
         <span class="var-chip" onclick="insertVar('{documento}')">&#123;documento&#125;</span>
-        <span class="var-chip" onclick="insertVar('{mes}')">&#123;mes&#125;</span>
+        <span class="var-chip" onclick="insertVar('{competencia}')">&#123;competencia&#125;</span>
       </div>
-      <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio dos documentos referentes a {mes}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="5"></textarea>
+      <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio de {documento} referente à competência {competencia}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="5"></textarea>
     </div>
 
     <input type="hidden" id="ag-edit-id"/>
@@ -1279,25 +1306,32 @@ function renderClientes(){
     (c.cnpj||'').includes(q)||
     (c.contato||'').toLowerCase().includes(q)
   );
-  const el=document.getElementById('cliente-grid');
-  if(!el) return;
-  el.innerHTML=list.length?list.map(clienteCardHTML).join(''):'<div class="empty-state"><span>👥</span>Nenhum cliente cadastrado.</div>';
+  const tbody=document.getElementById('cliente-tbody');
+  if(!tbody) return;
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><span>👥</span>Nenhum cliente cadastrado.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=list.map(clienteRowHTML).join('');
 }
 
-function clienteCardHTML(c){
-  return `<div class="cliente-card" onclick="editCliente('${c.id}')">
-    <div class="cnpj">${c.cnpj||'—'}</div>
-    <h4>${c.nome}</h4>
-    <div class="meta">
-      ${c.contato?`<span>👤 ${c.contato}</span>`:''}
-      ${c.telefone?`<span>📱 ${c.telefone}</span>`:''}
-    </div>
-    <div style="display:flex;gap:6px;margin-top:12px">
-      <button class="icon-btn" onclick="event.stopPropagation();editCliente('${c.id}')">✏️</button>
-      <button class="icon-btn del" onclick="event.stopPropagation();delCliente('${c.id}')">🗑</button>
-      ${c.telefone?`<button class="icon-btn" title="WhatsApp" onclick="event.stopPropagation();abrirWhatsApp('${c.telefone}')">💬</button>`:''}
-    </div>
-  </div>`;
+function clienteRowHTML(c){
+  const cnpjFmt=c.cnpj?`<span class="cnpj-badge">${fmtCNPJ(c.cnpj)}</span>`:`<span class="td-muted">—</span>`;
+  const telFmt=c.telefone?`<span>${fmtPhone(c.telefone)}</span>`:`<span class="td-muted">—</span>`;
+  const contatoFmt=c.contato||`<span class="td-muted">—</span>`;
+  return `<tr onclick="editCliente('${c.id}')">
+    <td>${cnpjFmt}</td>
+    <td><strong>${c.nome}</strong></td>
+    <td>${contatoFmt}</td>
+    <td>${telFmt}</td>
+    <td>
+      <div class="td-actions">
+        <button class="icon-btn" title="Editar" onclick="event.stopPropagation();editCliente('${c.id}')">✏️</button>
+        ${c.telefone?`<button class="icon-btn" title="WhatsApp" onclick="event.stopPropagation();abrirWhatsApp('${c.telefone}')">💬</button>`:''}
+        <button class="icon-btn del" title="Remover" onclick="event.stopPropagation();delCliente('${c.id}')">🗑</button>
+      </div>
+    </td>
+  </tr>`;
 }
 
 function abrirWhatsApp(tel){
@@ -1511,7 +1545,7 @@ function agendaCardHTML(a){
   const quando=a.tipo==='recorrente'
     ?`Todo dia <strong>${a.dia_mes}</strong> às ${a.hora}`
     :`${new Date(a.data_envio+'T12:00:00').toLocaleDateString('pt-BR')} às ${a.hora}`;
-  const msgPreview=(a.mensagem||'').replace(/\{nome\}/g,cliente.nome||'{nome}').replace(/\{cnpj\}/g,cliente.cnpj||'{cnpj}').replace(/\{contato\}/g,cliente.contato||'{contato}').replace(/\{mes\}/g,mesesPT[new Date().getMonth()]).replace(/\{documento\}/g,'{documento}');
+  const msgPreview=resolverTemplate(a.mensagem, cliente, a);
   return `<div class="agenda-card">
     <div class="agenda-top">
       <h4>${cliente.nome||'—'}</h4>
@@ -1536,7 +1570,7 @@ async function openNovoAgendamento(){
   // Garante lista atualizada de clientes
   if(!allClientes.length){const{data}=await db.from('clientes').select('*').order('nome');allClientes=data||[];}
   document.getElementById('modal-agenda-title').textContent='Novo Agendamento';
-  ['ag-telefone','ag-mensagem'].forEach(id=>document.getElementById(id).value='');
+  ['ag-telefone','ag-mensagem','ag-competencia','ag-documento'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ag-edit-id').value='';
   document.getElementById('ag-tipo').value='avulso';
   document.getElementById('ag-data').value='';
@@ -1566,6 +1600,8 @@ async function editAgendamento(id){
   document.getElementById('ag-telefone').value=a.telefone||'';
   document.getElementById('ag-tipo').value=a.tipo;
   document.getElementById('ag-mensagem').value=a.mensagem||'';
+  document.getElementById('ag-competencia').value=a.competencia||'';
+  document.getElementById('ag-documento').value=a.documento||'';
   if(a.tipo==='avulso'){
     document.getElementById('ag-data').value=a.data_envio||'';
     document.getElementById('ag-hora').value=a.hora||'09:00';
@@ -1581,8 +1617,10 @@ async function saveAgendamento(){
   const telefone=document.getElementById('ag-telefone').value.trim();
   const tipo=document.getElementById('ag-tipo').value;
   const mensagem=document.getElementById('ag-mensagem').value.trim();
+  const competencia=document.getElementById('ag-competencia').value||null;
+  const documento=document.getElementById('ag-documento').value.trim()||null;
   if(!clienteId||!telefone||!mensagem){alert('Preencha cliente, telefone e mensagem.');return;}
-  let payload={cliente_id:clienteId,telefone,tipo,mensagem,status:'pendente'};
+  let payload={cliente_id:clienteId,telefone,tipo,mensagem,status:'pendente',competencia,documento};
   if(tipo==='avulso'){
     const data=document.getElementById('ag-data').value;
     const hora=document.getElementById('ag-hora').value;
@@ -1630,8 +1668,7 @@ async function enviarMensagemWhatsApp(tel, texto){
 async function enviarAgora(id){
   const a=allAgendamentos.find(a=>a.id===id);if(!a)return;
   const cliente=allClientes.find(c=>c.id===a.cliente_id)||{};
-  const texto=resolverTemplate(a.mensagem,cliente);
-  if(!confirm(`Enviar mensagem para ${cliente.nome||a.telefone} agora?\n\n"${texto.slice(0,100)}${texto.length>100?'...':''}"`)) return;
+  const texto=resolverTemplate(a.mensagem,cliente,a);
   toast('📤 Enviando...');
   const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
   if(ok){
@@ -1642,14 +1679,21 @@ async function enviarAgora(id){
   }
 }
 
-function resolverTemplate(msg, cliente){
+function resolverTemplate(msg, cliente, agendamento){
   const hoje=new Date();
+  // Formatar competência: "2025-03" → "Março/2025"
+  let competenciaFmt='—';
+  if(agendamento?.competencia){
+    const [ano,mes]=agendamento.competencia.split('-');
+    competenciaFmt=`${mesesPT[parseInt(mes)-1]}/${ano}`;
+  }
   return (msg||'')
-    .replace(/\{nome\}/g,cliente.nome||'Cliente')
-    .replace(/\{cnpj\}/g,cliente.cnpj||'—')
-    .replace(/\{contato\}/g,cliente.contato||cliente.nome||'—')
-    .replace(/\{mes\}/g,mesesPT[hoje.getMonth()]+'/'+hoje.getFullYear())
-    .replace(/\{documento\}/g,'documentos do mês');
+    .replace(/\{nome\}/g,       cliente.nome||'Cliente')
+    .replace(/\{cnpj\}/g,       fmtCNPJ(cliente.cnpj))
+    .replace(/\{contato\}/g,    cliente.contato||cliente.nome||'—')
+    .replace(/\{competencia\}/g,competenciaFmt)
+    .replace(/\{mes\}/g,        competenciaFmt)           // mantém retrocompatibilidade
+    .replace(/\{documento\}/g,  agendamento?.documento||'documentos');
 }
 
 async function verificarAgendamentos(){
@@ -1676,7 +1720,7 @@ async function verificarAgendamentos(){
       }
       if(deveEnviar){
         const cliente=a.clientes||{};
-        const texto=resolverTemplate(a.mensagem,cliente);
+        const texto=resolverTemplate(a.mensagem,cliente,a);
         const ok=await enviarMensagemWhatsApp(a.telefone||cliente.telefone,texto);
         if(ok){
           const upd={ultimo_envio:new Date().toISOString()};
