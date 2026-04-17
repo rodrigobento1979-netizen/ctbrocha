@@ -701,6 +701,20 @@ let importPreviewData=[], agendaCheckInterval=null;
 // ── UTILS ──
 const initials=n=>(n||'?').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
 const fmtDate=ts=>ts?new Date(ts).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+function fmtCNPJ(v){
+  const n=(v||'').toString().replace(/\D/g,'').slice(0,14);
+  if(!n) return '—';
+  if(n.length!==14) return v||'—';
+  return n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5');
+}
+function fmtPhone(v){
+  const raw=(v||'').toString().replace(/\D/g,'');
+  const n=raw.length>11 && raw.startsWith('55') ? raw.slice(2) : raw;
+  if(!n) return '—';
+  if(n.length===11) return n.replace(/^(\d{2})(\d{5})(\d{4})$/,'($1) $2-$3');
+  if(n.length===10) return n.replace(/^(\d{2})(\d{4})(\d{4})$/,'($1) $2-$3');
+  return v||'—';
+}
 function statusBadge(s,arquivado){
   if(arquivado) return `<span class="badge badge-arquivado">Arquivado</span>`;
   const map={novo:'badge-novo',andamento:'badge-andamento',concluido:'badge-concluido',cancelado:'badge-cancelado'};
