@@ -291,6 +291,32 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
   #modal-agenda .modal{width:min(560px,100%)}
 }
 
+
+/* CONTABILIDADE */
+.contab-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.contab-card{background:var(--ticket-bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:12px;transition:.2s}
+.contab-card:hover{border-color:rgba(200,154,104,.3);filter:brightness(1.05)}
+.contab-card h4{font-size:16px;line-height:1.3}
+.contab-mini{font-size:12px;color:var(--muted);display:grid;gap:4px}
+.contab-status-pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;width:max-content}
+.contab-status-nao_iniciado{background:rgba(150,150,150,.15);color:#bcbcbc;border:1px solid rgba(150,150,150,.25)}
+.contab-status-em_andamento{background:rgba(126,196,232,.15);color:#2980b9;border:1px solid rgba(126,196,232,.3)}
+.contab-status-pendente{background:rgba(200,154,104,.15);color:var(--gold);border:1px solid rgba(200,154,104,.3)}
+.contab-status-concluido{background:rgba(127,202,155,.15);color:#3a9e6a;border:1px solid rgba(127,202,155,.3)}
+.contab-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.contab-detail-top{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-bottom:16px}
+.contab-panel{background:var(--detail-bg);border:1px solid var(--line);border-radius:14px;padding:14px}
+.contab-panel h4{font-size:12px;color:var(--gold-2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.contab-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.contab-history-table{width:100%;border-collapse:collapse}
+.contab-history-table th,.contab-history-table td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}
+.contab-file-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--detail-bg);margin-bottom:8px}
+.contab-file-name{font-size:13px}
+.contab-file-meta{font-size:11px;color:var(--muted)}
+@media(max-width:900px){
+  .contab-detail-top,.contab-grid-3{grid-template-columns:1fr}
+}
+
 @media(max-width:768px){
   .topbar{padding:0 12px;flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;gap:6px}
   .nav-tabs{width:100%;overflow-x:auto}
@@ -328,6 +354,7 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
       <button class="nav-tab" onclick="showScreen('tickets')">Tickets</button>
       <button class="nav-tab" onclick="showScreen('clientes')">Clientes</button>
       <button class="nav-tab" onclick="showScreen('agenda')">Agenda</button>
+      <button class="nav-tab" onclick="showScreen('contabilidade')">Contabilidade</button>
       <button class="nav-tab" onclick="showScreen('colaboradores')">Colaboradores</button>
       <button class="nav-tab" onclick="showScreen('configuracoes')">⚙️ Config</button>
     </div>
@@ -442,6 +469,19 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
         <button class="filter-btn" onclick="setAgendaFilter(this,'recorrente')">Recorrentes</button>
       </div>
       <div class="agenda-grid" id="agenda-grid"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+    </div>
+
+
+    <!-- CONTABILIDADE -->
+    <div id="sc-contabilidade" class="screen">
+      <div class="section-title">
+        <span>Contabilidade</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="search-bar" id="contab-search" placeholder="Buscar empresa..." oninput="renderContabilidade()" style="min-width:260px"/>
+          <button class="btn-create" onclick="openNovaEmpresaContabil()">+ Nova Empresa</button>
+        </div>
+      </div>
+      <div class="contab-cards" id="contab-cards"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
     </div>
 
     <!-- COLABORADORES -->
@@ -687,6 +727,65 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
   </div>
 </div>
 
+
+<!-- MODAL EMPRESA CONTÁBIL -->
+<div class="modal-overlay hidden" id="modal-empresa-contabil">
+  <div class="modal" style="width:min(620px,100%)">
+    <button class="modal-close" onclick="closeModal('modal-empresa-contabil')">✕</button>
+    <h3 id="modal-empresa-title">Nova Empresa Contábil</h3>
+    <div class="field">
+      <label>Cliente *</label>
+      <select id="ec-cliente-id">
+        <option value="">— Selecione um cliente —</option>
+      </select>
+    </div>
+    <div class="form-row" style="margin-top:12px">
+      <div class="field">
+        <label>Nome de exibição</label>
+        <input id="ec-nome" type="text" placeholder="Opcional: usar nome personalizado"/>
+      </div>
+      <div class="field">
+        <label>Responsável</label>
+        <select id="ec-responsavel">
+          <option value="">— Sem responsável —</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="ec-edit-id"/>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('modal-empresa-contabil')">Cancelar</button>
+      <button class="btn-save" id="btn-save-empresa-contabil" onclick="saveEmpresaContabil()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE CONTABILIDADE -->
+<div class="modal-overlay hidden" id="modal-contab-detalhe">
+  <div class="modal modal-wide" style="width:min(1100px,96vw)">
+    <button class="modal-close" onclick="closeModal('modal-contab-detalhe')">✕</button>
+    <div id="contab-detalhe-content"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+</div>
+
+<!-- MODAL ARQUIVOS CONTABILIDADE -->
+<div class="modal-overlay hidden" id="modal-contab-files">
+  <div class="modal modal-wide" style="width:min(980px,96vw)">
+    <button class="modal-close" onclick="closeModal('modal-contab-files')">✕</button>
+    <h3 id="contab-files-title">Arquivos</h3>
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div id="contab-files-path" style="font-size:13px;color:var(--muted)"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-cancel" onclick="contabGoRoot()">Raiz</button>
+        <button class="btn-cancel" onclick="contabCreateFolder()">Nova pasta</button>
+        <button class="btn-save" onclick="document.getElementById('contab-file-input').click()">Anexar arquivo</button>
+        <input type="file" id="contab-file-input" style="display:none" onchange="handleContabFileUpload(event)"/>
+      </div>
+    </div>
+    <div id="contab-files-list"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+</div>
+
+
 <!-- MODAL QR CODE -->
 <div class="modal-overlay hidden" id="modal-qrcode">
   <div class="modal" style="width:min(440px,100%);text-align:center">
@@ -719,6 +818,7 @@ let chartDiario=null, chartStatus=null;
 let autoRefreshInterval=null;
 let allClientes=[], allAgendamentos=[], activeAgendaFilter='todos';
 let importPreviewData=[], agendaCheckInterval=null;
+let allEmpresasContabeis=[], allCompetenciasContabeis=[], currentEmpresaContabilId=null, currentContabPath='';
 
 // ── UTILS ──
 const initials=n=>(n||'?').split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
@@ -802,12 +902,13 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('sc-'+name).classList.add('active');
-  const tabs={dashboard:0,tickets:1,clientes:2,agenda:3,colaboradores:4,configuracoes:5};
+  const tabs={dashboard:0,tickets:1,clientes:2,agenda:3,contabilidade:4,colaboradores:5,configuracoes:6};
   document.querySelectorAll('.nav-tab')[tabs[name]].classList.add('active');
   if(name==='dashboard') loadDashboard();
   if(name==='tickets'){loadColabs();loadTickets().then(renderTickets);}
   if(name==='clientes') loadClientes();
   if(name==='agenda') loadAgenda();
+  if(name==='contabilidade') loadContabilidade();
   if(name==='colaboradores') loadColabs();
   if(name==='configuracoes') carregarConfigFH();
 }
@@ -1785,12 +1886,12 @@ async function verificarAgendamentos(){
 
 // Fechar modal de importação ao clicar fora
 document.addEventListener('click',e=>{
-  ['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda'].forEach(id=>{
+  ['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda','modal-empresa-contabil','modal-contab-detalhe','modal-contab-files'].forEach(id=>{
     const el=document.getElementById(id);if(el&&e.target===el)closeModal(id);
   });
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda'].forEach(id=>closeModal(id));
+  if(e.key==='Escape')['modal-ticket','modal-detalhe','modal-colab','modal-cliente','modal-import-preview','modal-agenda','modal-empresa-contabil','modal-contab-detalhe','modal-contab-files'].forEach(id=>closeModal(id));
 });
 
 // ══════════════════════════════════════
@@ -1891,6 +1992,376 @@ async function verificarEEnviarForaHorario(whatsapp, setor, cliente){
     console.error('Erro ao enviar mensagem fora do horário:', e);
   }
 }
+
+
+
+async function preencherResponsavelEmpresaContabil(selected=''){
+  const sel=document.getElementById('ec-responsavel');
+  if(!sel) return;
+  if(!allColabs.length){
+    const {data}=await db.from('colaboradores').select('*').order('nome');
+    allColabs=data||[];
+  }
+  sel.innerHTML='<option value="">— Sem responsável —</option>' + allColabs.map(c =>
+    `<option value="${c.nome}" ${c.nome===selected?'selected':''}>${c.nome}</option>`
+  ).join('');
+}
+
+// ══════════════════════════════════════
+// CONTABILIDADE
+// ══════════════════════════════════════
+const CONTAB_STATUS_LABELS={
+  nao_iniciado:'Não iniciado',
+  em_andamento:'Em andamento',
+  pendente:'Pendente',
+  concluido:'Concluído'
+};
+
+function contabStatusPill(status='nao_iniciado'){
+  return `<span class="contab-status-pill contab-status-${status}">${CONTAB_STATUS_LABELS[status]||status}</span>`;
+}
+
+async function loadContabilidade(){
+  const [{data:empresas,error:errEmp},{data:competencias,error:errComp}] = await Promise.all([
+    db.from('empresas_contabeis').select('*, clientes(nome,cnpj,contato)').order('nome_exibicao'),
+    db.from('competencias_contabeis').select('*').order('competencia',{ascending:false})
+  ]);
+  if(errEmp){console.error(errEmp); toast('Erro ao carregar Contabilidade.',4000); return;}
+  if(errComp){console.error(errComp); toast('Erro ao carregar competências.',4000); return;}
+  allEmpresasContabeis=empresas||[];
+  allCompetenciasContabeis=competencias||[];
+  renderContabilidade();
+}
+
+function renderContabilidade(){
+  const q=(document.getElementById('contab-search')?.value||'').toLowerCase();
+  const list=(allEmpresasContabeis||[]).filter(e=>{
+    const nome=(e.nome_exibicao||e.clientes?.nome||'').toLowerCase();
+    const cnpj=(e.clientes?.cnpj||'');
+    return !q || nome.includes(q) || cnpj.includes(q);
+  });
+  const el=document.getElementById('contab-cards');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<div class="empty-state" style="grid-column:1/-1"><span>📚</span>Nenhuma empresa cadastrada na Contabilidade.</div>';
+    return;
+  }
+  el.innerHTML=list.map(empresa=>{
+    const historico=allCompetenciasContabeis.filter(c=>c.empresa_id===empresa.id).sort((a,b)=>String(b.competencia).localeCompare(String(a.competencia)));
+    const ultima=historico[0];
+    return `<div class="contab-card">
+      <h4>${empresa.nome_exibicao||empresa.clientes?.nome||'Empresa'}</h4>
+      <div class="contab-mini">
+        <span>${fmtCNPJ(empresa.clientes?.cnpj)}</span>
+        <span>Responsável: ${empresa.responsavel||'—'}</span>
+        <span>Última competência: ${ultima?fmtCompetencia(ultima.competencia):'—'}</span>
+      </div>
+      <div>${contabStatusPill(ultima?.status||'nao_iniciado')}</div>
+      <div class="contab-card-actions">
+        <button class="btn-sm" onclick="openContabDetalhe('${empresa.id}')">Abrir</button>
+        <button class="btn-sm" onclick="openContabFiles('${empresa.id}')">📁 Arquivos</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function fmtCompetencia(v){
+  if(!v) return '—';
+  const [ano,mes]=String(v).split('-');
+  if(!ano || !mes) return v;
+  return `${mes}/${ano}`;
+}
+
+async function preencherSelectEmpresaContabil(clienteId='', responsavel=''){
+  if(!allClientes.length) await loadClientes();
+  if(!allColabs.length) await loadColabs();
+  const sel=document.getElementById('ec-cliente-id');
+  const selResp=document.getElementById('ec-responsavel');
+  if(sel) sel.innerHTML='<option value="">— Selecione um cliente —</option>' + allClientes.map(c=>`<option value="${c.id}" ${String(c.id)===String(clienteId)?'selected':''}>${c.nome}</option>`).join('');
+  if(selResp) selResp.innerHTML='<option value="">— Sem responsável —</option>' + allColabs.map(c=>`<option value="${c.nome}" ${c.nome===responsavel?'selected':''}>${c.nome}</option>`).join('');
+}
+
+async function openNovaEmpresaContabil(){
+  document.getElementById('modal-empresa-title').textContent='Nova Empresa Contábil';
+  document.getElementById('ec-edit-id').value='';
+  document.getElementById('ec-nome').value='';
+  await preencherSelectEmpresaContabil('','');
+  openModal('modal-empresa-contabil');
+}
+
+async function editEmpresaContabil(id){
+  const e=allEmpresasContabeis.find(x=>x.id===id); if(!e) return;
+  document.getElementById('modal-empresa-title').textContent='Editar Empresa Contábil';
+  document.getElementById('ec-edit-id').value=e.id;
+  document.getElementById('ec-nome').value=e.nome_exibicao||'';
+  await preencherSelectEmpresaContabil(e.cliente_id,e.responsavel||'');
+  openModal('modal-empresa-contabil');
+}
+
+async function saveEmpresaContabil(){
+  const clienteId=document.getElementById('ec-cliente-id').value;
+  const nome=document.getElementById('ec-nome').value.trim();
+  const responsavel=document.getElementById('ec-responsavel').value||null;
+  const editId=document.getElementById('ec-edit-id').value;
+  if(!clienteId){alert('Selecione o cliente.');return;}
+  const cliente=allClientes.find(c=>String(c.id)===String(clienteId));
+  const payload={cliente_id:clienteId,nome_exibicao:nome||cliente?.nome||'Empresa',responsavel};
+  setLoading('btn-save-empresa-contabil',true);
+  let error=null;
+  if(editId){
+    const resp=await db.from('empresas_contabeis').update(payload).eq('id',editId);
+    error=resp.error;
+  } else {
+    const resp=await db.from('empresas_contabeis').insert(payload);
+    error=resp.error;
+  }
+  setLoading('btn-save-empresa-contabil',false,'Salvar');
+  if(error){console.error(error); alert('Não foi possível salvar a empresa.'); return;}
+  closeModal('modal-empresa-contabil');
+  toast('✅ Empresa contábil salva!');
+  await loadContabilidade();
+}
+
+async function openContabDetalhe(id){
+  currentEmpresaContabilId=id;
+  openModal('modal-contab-detalhe');
+  await renderContabDetalhe();
+}
+
+async function renderContabDetalhe(editCompId=''){
+  const empresa=allEmpresasContabeis.find(e=>e.id===currentEmpresaContabilId);
+  if(!empresa){
+    document.getElementById('contab-detalhe-content').innerHTML='<div class="empty-state"><span>⚠️</span>Empresa não encontrada.</div>';
+    return;
+  }
+  const historico=allCompetenciasContabeis.filter(c=>c.empresa_id===empresa.id).sort((a,b)=>String(b.competencia).localeCompare(String(a.competencia)));
+  const editItem=editCompId ? historico.find(c=>c.id===editCompId) : null;
+  document.getElementById('contab-detalhe-content').innerHTML=`
+    <div class="contab-detail-top">
+      <div class="contab-panel">
+        <h4>Empresa</h4>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">${empresa.nome_exibicao||empresa.clientes?.nome||'Empresa'}</div>
+        <div class="contab-mini">
+          <span>${fmtCNPJ(empresa.clientes?.cnpj)}</span>
+          <span>Contato: ${empresa.clientes?.contato||'—'}</span>
+          <span>Responsável: ${empresa.responsavel||'—'}</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <button class="btn-sm" onclick="editEmpresaContabil('${empresa.id}')">✏️ Editar Empresa</button>
+          <button class="btn-sm" onclick="openContabFiles('${empresa.id}')">📁 Arquivos</button>
+          <button class="btn-sm btn-danger" onclick="deleteEmpresaContabil('${empresa.id}')">🗑 Remover</button>
+        </div>
+      </div>
+
+      <div class="contab-panel">
+        <h4>${editItem?'Editar Competência':'Nova Competência'}</h4>
+        <div class="contab-grid-3">
+          <div class="field">
+            <label>Competência *</label>
+            <input id="cc-competencia" type="month" value="${editItem?.competencia||''}"/>
+          </div>
+          <div class="field">
+            <label>Status *</label>
+            <select id="cc-status">
+              <option value="nao_iniciado" ${editItem?.status==='nao_iniciado'?'selected':''}>Não iniciado</option>
+              <option value="em_andamento" ${editItem?.status==='em_andamento'?'selected':''}>Em andamento</option>
+              <option value="pendente" ${editItem?.status==='pendente'?'selected':''}>Pendente</option>
+              <option value="concluido" ${editItem?.status==='concluido'?'selected':''}>Concluído</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <div style="display:flex;gap:8px">
+              <button class="btn-save" id="btn-save-competencia" onclick="saveCompetenciaContabil('${editItem?.id||''}')">Salvar</button>
+              ${editItem?'<button class="btn-cancel" onclick="renderContabDetalhe()">Cancelar</button>':''}
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Observação</label>
+          <textarea id="cc-observacao" rows="4" placeholder="Descreva o andamento, pendência ou observações...">${editItem?.observacao||''}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="contab-panel">
+      <h4>Histórico de Competências</h4>
+      <div style="overflow:auto">
+        <table class="contab-history-table">
+          <thead>
+            <tr>
+              <th>Competência</th>
+              <th>Status</th>
+              <th>Observação</th>
+              <th>Atualizado em</th>
+              <th style="text-align:right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${historico.length ? historico.map(item=>`
+              <tr>
+                <td>${fmtCompetencia(item.competencia)}</td>
+                <td>${contabStatusPill(item.status)}</td>
+                <td>${item.observacao||'—'}</td>
+                <td>${fmtDate(item.updated_at||item.created_at)}</td>
+                <td>
+                  <div class="td-actions">
+                    <button class="icon-btn" onclick="renderContabDetalhe('${item.id}')">✏️</button>
+                    <button class="icon-btn del" onclick="deleteCompetenciaContabil('${item.id}')">🗑</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:30px 10px"><span>📅</span>Nenhuma competência lançada.</div></td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+async function saveCompetenciaContabil(editId=''){
+  const competencia=document.getElementById('cc-competencia').value;
+  const status=document.getElementById('cc-status').value;
+  const observacao=document.getElementById('cc-observacao').value.trim()||null;
+  if(!competencia){alert('Informe a competência.');return;}
+  setLoading('btn-save-competencia',true);
+  const payload={empresa_id:currentEmpresaContabilId,competencia,status,observacao,updated_at:new Date().toISOString()};
+  let error=null;
+  if(editId){
+    const resp=await db.from('competencias_contabeis').update(payload).eq('id',editId);
+    error=resp.error;
+  } else {
+    const resp=await db.from('competencias_contabeis').insert(payload);
+    error=resp.error;
+  }
+  setLoading('btn-save-competencia',false,'Salvar');
+  if(error){console.error(error); alert('Não foi possível salvar a competência. Verifique se já existe essa competência para a empresa.'); return;}
+  toast('✅ Competência salva!');
+  await loadContabilidade();
+  await renderContabDetalhe();
+}
+
+async function deleteCompetenciaContabil(id){
+  if(!confirm('Remover esta competência?')) return;
+  const {error}=await db.from('competencias_contabeis').delete().eq('id',id);
+  if(error){console.error(error); alert('Não foi possível remover a competência.'); return;}
+  toast('Competência removida.');
+  await loadContabilidade();
+  await renderContabDetalhe();
+}
+
+async function deleteEmpresaContabil(id){
+  if(!confirm('Remover esta empresa da Contabilidade?')) return;
+  const {error}=await db.from('empresas_contabeis').delete().eq('id',id);
+  if(error){console.error(error); alert('Não foi possível remover a empresa.'); return;}
+  closeModal('modal-contab-detalhe');
+  toast('Empresa removida da Contabilidade.');
+  await loadContabilidade();
+}
+
+// Arquivos da contabilidade
+async function openContabFiles(empresaId){
+  currentEmpresaContabilId=empresaId;
+  currentContabPath=`${empresaId}/`;
+  openModal('modal-contab-files');
+  await loadContabFiles();
+}
+
+async function loadContabFiles(){
+  const empresa=allEmpresasContabeis.find(e=>e.id===currentEmpresaContabilId);
+  document.getElementById('contab-files-title').textContent=`Arquivos — ${empresa?.nome_exibicao||empresa?.clientes?.nome||'Empresa'}`;
+  document.getElementById('contab-files-path').textContent=currentContabPath || '/';
+  const {data,error}=await db.storage.from('contabilidade-arquivos').list(currentContabPath,{limit:100,sortBy:{column:'name',order:'asc'}});
+  const el=document.getElementById('contab-files-list');
+  if(error){console.error(error); el.innerHTML='<div class="empty-state"><span>⚠️</span>Não foi possível carregar os arquivos.</div>'; return;}
+  const list=(data||[]).filter(item=>item.name!=='.emptyFolderPlaceholder');
+  if(!list.length){el.innerHTML='<div class="empty-state"><span>📁</span>Nenhum arquivo ou pasta.</div>'; return;}
+  el.innerHTML=list.map(item=>{
+    const isFolder = !item.metadata;
+    if(isFolder){
+      return `<div class="contab-file-row">
+        <div><div class="contab-file-name">📁 ${item.name}</div><div class="contab-file-meta">Pasta</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="icon-btn" onclick="contabOpenFolder('${item.name}')">📂</button>
+          <button class="icon-btn del" onclick="contabDeleteFolder('${item.name}')">🗑</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="contab-file-row">
+      <div><div class="contab-file-name">📄 ${item.name}</div><div class="contab-file-meta">${Math.round((item.metadata?.size||0)/1024)} KB</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="contabDownloadFile('${item.name}')">⬇️</button>
+        <button class="icon-btn del" onclick="contabDeleteFile('${item.name}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function contabGoRoot(){
+  if(!currentEmpresaContabilId) return;
+  currentContabPath=`${currentEmpresaContabilId}/`;
+  loadContabFiles();
+}
+
+function contabOpenFolder(name){
+  currentContabPath = `${currentContabPath}${name}/`;
+  loadContabFiles();
+}
+
+async function contabCreateFolder(){
+  const name=prompt('Nome da nova pasta:');
+  if(!name) return;
+  const path=`${currentContabPath}${name}/.emptyFolderPlaceholder`;
+  const blob=new Blob(['folder'],{type:'text/plain'});
+  const {error}=await db.storage.from('contabilidade-arquivos').upload(path, blob, {upsert:true});
+  if(error){console.error(error); alert('Não foi possível criar a pasta.'); return;}
+  toast('Pasta criada!');
+  loadContabFiles();
+}
+
+async function handleContabFileUpload(e){
+  const file=e.target.files?.[0];
+  if(!file) return;
+  const path=`${currentContabPath}${Date.now()}_${file.name}`;
+  const {error}=await db.storage.from('contabilidade-arquivos').upload(path, file, {upsert:true});
+  e.target.value='';
+  if(error){console.error(error); alert('Não foi possível enviar o arquivo.'); return;}
+  toast('Arquivo enviado!');
+  loadContabFiles();
+}
+
+async function contabDownloadFile(name){
+  const path=`${currentContabPath}${name}`;
+  const {data,error}=await db.storage.from('contabilidade-arquivos').createSignedUrl(path,60);
+  if(error||!data?.signedUrl){console.error(error); alert('Não foi possível baixar o arquivo.'); return;}
+  const a=document.createElement('a');
+  a.href=data.signedUrl;
+  a.download=name;
+  a.click();
+}
+
+async function contabDeleteFile(name){
+  if(!confirm('Remover este arquivo?')) return;
+  const path=`${currentContabPath}${name}`;
+  const {error}=await db.storage.from('contabilidade-arquivos').remove([path]);
+  if(error){console.error(error); alert('Não foi possível remover o arquivo.'); return;}
+  toast('Arquivo removido.');
+  loadContabFiles();
+}
+
+async function contabDeleteFolder(name){
+  if(!confirm('Remover esta pasta e seu placeholder?')) return;
+  const path=`${currentContabPath}${name}/.emptyFolderPlaceholder`;
+  const {error}=await db.storage.from('contabilidade-arquivos').remove([path]);
+  if(error){console.error(error); alert('Não foi possível remover a pasta.'); return;}
+  toast('Pasta removida.');
+  loadContabFiles();
+}
+
+
+async function removerEmpresaContabilidade(id){ return removerEmpresaContabil(id); }
+async function excluirEmpresaContabil(id){ return removerEmpresaContabil(id); }
+async function excluirCompetenciaContabil(id){ return (typeof removerCompetenciaContabil==='function' ? removerCompetenciaContabil(id) : removerCompetencia(id)); }
 
 // ── INIT ──
 applyTheme();
