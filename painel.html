@@ -277,6 +277,20 @@ display:flex;align-items:center;justify-content:center;padding:40px;color:var(--
 .toast.hide{transform:translateY(80px);opacity:0}
 footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);opacity:.5}
 
+
+/* AGENDA MODAL HORIZONTAL */
+#modal-agenda .modal{width:min(1100px,95vw);max-height:88vh}
+#modal-agenda .agenda-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+#modal-agenda .agenda-grid-2{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}
+#modal-agenda textarea#ag-mensagem{min-height:120px}
+#modal-agenda .field{margin-bottom:0}
+#modal-agenda .compact-help{font-size:11px;color:var(--muted)}
+@media(max-width:900px){
+  #modal-agenda .agenda-grid-4,
+  #modal-agenda .agenda-grid-2{grid-template-columns:1fr}
+  #modal-agenda .modal{width:min(560px,100%)}
+}
+
 @media(max-width:768px){
   .topbar{padding:0 12px;flex-wrap:wrap;height:auto;padding-top:8px;padding-bottom:8px;gap:6px}
   .nav-tabs{width:100%;overflow-x:auto}
@@ -594,7 +608,7 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
 
 <!-- MODAL AGENDAMENTO -->
 <div class="modal-overlay hidden" id="modal-agenda">
-  <div class="modal" style="width:min(560px,100%)">
+  <div class="modal">
     <button class="modal-close" onclick="closeModal('modal-agenda')">✕</button>
     <h3 id="modal-agenda-title">Novo Agendamento</h3>
 
@@ -605,46 +619,54 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
       </select>
     </div>
 
-    <div class="form-row" style="margin-top:12px">
+    <div class="agenda-grid-4" style="margin-top:12px">
       <div class="field">
         <label>WhatsApp de Envio *</label>
         <input id="ag-telefone" type="text" placeholder="(31) 99999-9999" oninput="maskPhone(this)" maxlength="15"/>
       </div>
+
       <div class="field">
         <label>Tipo de Agendamento *</label>
         <select id="ag-tipo" onchange="toggleAgendaTipo()">
-          <option value="avulso">📅 Avulso (data única)</option>
-          <option value="recorrente">🔁 Recorrente (todo mês)</option>
+          <option value="avulso">📅 Avulso</option>
+          <option value="recorrente">🔁 Recorrente</option>
         </select>
       </div>
-    </div>
 
-    <div id="ag-avulso-fields" style="margin-top:12px">
-      <div class="form-row">
-        <div class="field"><label>Data *</label><input id="ag-data" type="date"/></div>
-        <div class="field"><label>Horário *</label><input id="ag-hora" type="time" value="09:00"/></div>
+      <div class="field" id="ag-data-field">
+        <label>Data *</label>
+        <input id="ag-data" type="date"/>
+      </div>
+
+      <div class="field" id="ag-hora-avulso-field">
+        <label>Horário *</label>
+        <input id="ag-hora" type="time" value="09:00"/>
+      </div>
+
+      <div class="field" id="ag-dia-rec-field" style="display:none">
+        <label>Dia do mês *</label>
+        <input id="ag-dia-mes" type="number" min="1" max="28" placeholder="Ex: 5"/>
+      </div>
+
+      <div class="field" id="ag-hora-rec-field-wrap" style="display:none">
+        <label>Horário *</label>
+        <input id="ag-hora-rec" type="time" value="09:00"/>
       </div>
     </div>
 
-    <div id="ag-recorrente-fields" style="margin-top:12px;display:none">
-      <div class="form-row">
-        <div class="field"><label>Dia do mês *</label><input id="ag-dia-mes" type="number" min="1" max="28" placeholder="Ex: 5"/></div>
-        <div class="field"><label>Horário *</label><input id="ag-hora-rec" type="time" value="09:00"/></div>
-      </div>
-    </div>
-
-    <div class="form-row" style="margin-top:12px">
+    <div class="agenda-grid-2" style="margin-top:12px">
       <div class="field">
-        <label>Competência <small style="color:var(--muted)">(preenche <code class="var-code">{competencia}</code>)</small></label>
+        <label>Competência <span class="compact-help">(preenche <code class="var-code">{competencia}</code>)</span></label>
         <input id="ag-competencia" type="month" />
       </div>
+
       <div class="field">
-        <label>Tipo de Documento <small style="color:var(--muted)">(preenche <code class="var-code">{documento}</code>)</small></label>
+        <label>Tipo de Documento <span class="compact-help">(preenche <code class="var-code">{documento}</code>)</span></label>
         <input id="ag-documento" type="text" placeholder="Ex: Notas fiscais, Folha de ponto..."/>
       </div>
     </div>
 
-    <div class="field" style="margin-top:12px">
+    <div class="field" style="margin-top:14px">
       <label>Mensagem *</label>
       <div class="template-vars">
         <span style="font-size:11px;color:var(--muted);align-self:center">Variáveis:</span>
@@ -654,7 +676,7 @@ footer{text-align:center;padding:16px;font-size:12px;color:var(--muted);border-t
         <span class="var-chip" onclick="insertVar('{documento}')">&#123;documento&#125;</span>
         <span class="var-chip" onclick="insertVar('{competencia}')">&#123;competencia&#125;</span>
       </div>
-      <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio de {documento} referente à competência {competencia}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="5"></textarea>
+      <textarea id="ag-mensagem" style="margin-top:8px" placeholder="Ex: Olá {nome}, solicitamos o envio de {documento} referente à competência {competencia}. Por favor, envie o quanto antes. Att, Contabilidade Rocha." rows="4"></textarea>
     </div>
 
     <input type="hidden" id="ag-edit-id"/>
@@ -1509,8 +1531,22 @@ async function confirmarImport(){
 
 function toggleAgendaTipo(){
   const tipo=document.getElementById('ag-tipo').value;
-  document.getElementById('ag-avulso-fields').style.display=tipo==='avulso'?'block':'none';
-  document.getElementById('ag-recorrente-fields').style.display=tipo==='recorrente'?'block':'none';
+  const dataField=document.getElementById('ag-data-field');
+  const horaAvulso=document.getElementById('ag-hora-avulso-field');
+  const diaRec=document.getElementById('ag-dia-rec-field');
+  const horaRec=document.getElementById('ag-hora-rec-field-wrap');
+
+  if(tipo==='avulso'){
+    dataField.style.display='block';
+    horaAvulso.style.display='block';
+    diaRec.style.display='none';
+    horaRec.style.display='none';
+  } else {
+    dataField.style.display='none';
+    horaAvulso.style.display='none';
+    diaRec.style.display='block';
+    horaRec.style.display='block';
+  }
 }
 
 function insertVar(v){
